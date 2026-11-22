@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: head(${isNew ? 'Nouveau ' + document.type.libelle : 'Modifier ' + document.reference})}"></head>
+<body>
+
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<main class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <!-- Fil d'ariane -->
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a th:href="@{/dashboard}">Tableau de bord</a></li>
+                    <li class="breadcrumb-item">
+                        <a th:href="@{${document.isDevis() ? '/devis' : '/factures'}}" th:text="${document.type.libelle + 's'}">Documents</a>
+                    </li>
+                    <li class="breadcrumb-item active" th:text="${isNew ? 'Nouveau ' + document.type.libelle : 'Modifier ' + document.reference}">Édition</li>
+                </ol>
+            </nav>
+
+            <div class="card shadow-sm p-4">
+                <div class="d-flex align-items-center gap-2 mb-4 pb-3 border-bottom">
+                    <i th:class="${document.isDevis() ? 'bi bi-file-earmark-plus text-primary fs-3' : 'bi bi-receipt text-success fs-3'}"></i>
+                    <div>
+                        <h3 class="fw-bold mb-0" th:text="${isNew ? 'Créer un nouveau ' + document.type.libelle : 'Modifier le ' + document.type.libelle + ' ' + document.reference}">Document</h3>
+                        <small class="text-muted">Remplissez les détails du client et de la facturation</small>
+                    </div>
+                </div>
+
+                <form th:action="@{/documents/enregistrer}" th:object="${document}" method="post">
+                    <!-- Champs cachés -->
+                    <input type="hidden" th:field="*{id}">
+                    <input type="hidden" th:field="*{type}">
+                    <input type="hidden" th:field="*{dateCreation}">
+
+                    <!-- Section Informations Générales -->
+                    <h5 class="fw-semibold text-secondary mb-3"><i class="bi bi-info-circle me-1"></i> Informations Générales</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-medium">Référence</label>
+                            <input type="text" class="form-control" th:field="*{reference}" required>
+                            <small class="text-muted">Ex: DEV-2026-001</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-medium">Date du document <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" th:field="*{date}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-medium">Date d'échéance / validité</label>
+                            <input type="date" class="form-control" th:field="*{dateEcheance}">
+                        </div>
+                    </div>
+
+                    <!-- Section Client -->
+                    <h5 class="fw-semibold text-secondary mb-3"><i class="bi bi-person me-1"></i> Client</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Nom du client <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" th:field="*{nomClient}" placeholder="Ex: Société Dupont, Jean Martin..." required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Email du client</label>
+                            <input type="email" class="form-control" th:field="*{emailClient}" placeholder="contact@client.com">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Téléphone du client</label>
+                            <input type="text" class="form-control" th:field="*{telephoneClient}" placeholder="01 23 45 67 89">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Adresse du client</label>
+                            <input type="text" class="form-control" th:field="*{adresseClient}" placeholder="Numéro, rue, code postal, ville">
+                        </div>
+                    </div>
+
+                    <!-- Section Montant et Statut -->
+                    <h5 class="fw-semibold text-secondary mb-3"><i class="bi bi-currency-euro me-1"></i> Montant & Statut</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Montant Total (€) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" min="0" class="form-control form-control-lg fw-bold" th:field="*{montantTotal}" required>
+                                <span class="input-group-text fw-bold">€</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Statut du document <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-lg" th:field="*{statut}" required>
+                                <option th:each="st : ${statuts}" th:value="${st.name()}" th:text="${st.libelle}"></option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-medium">Description des prestations / Remarques</label>
+                            <textarea class="form-control" rows="4" th:field="*{description}" placeholder="Détail des services, conditions de paiement, livrables..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="d-flex justify-content-between pt-3 border-top">
+                        <a th:href="@{${document.isDevis() ? '/devis' : '/factures'}}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Annuler
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                            <i class="bi bi-check-lg me-1"></i> Enregistrer le document
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+
+</body>
+</html>

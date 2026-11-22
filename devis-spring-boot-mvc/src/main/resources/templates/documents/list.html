@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: head(${currentType.libelle + 's'})}"></head>
+<body>
+
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<main class="container my-4">
+    <!-- Messages Flash -->
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <span th:text="${successMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- En-tête -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <i th:class="${currentType.name() == 'DEVIS' ? 'bi bi-file-earmark-text text-primary fs-3' : 'bi bi-receipt text-success fs-3'}"></i>
+                <h2 class="fw-bold mb-0" th:text="${currentType.libelle + 's Clients'}">Documents Clients</h2>
+            </div>
+            <p class="text-muted mb-0">Liste complète, recherche et gestion de vos <span th:text="${#strings.toLowerCase(currentType.libelle)} + 's'"></span>.</p>
+        </div>
+        <div>
+            <a th:href="@{/documents/nouveau(type=${currentType.name()})}" 
+               th:class="${currentType.name() == 'DEVIS' ? 'btn btn-primary' : 'btn btn-success'}">
+                <i class="bi bi-plus-lg me-1"></i>
+                <span th:text="'Nouveau ' + ${currentType.libelle}">Nouveau</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Barre de Filtres et Recherche -->
+    <div class="card shadow-sm p-3 mb-4">
+        <form method="get" th:action="@{${currentType.name() == 'DEVIS' ? '/devis' : '/factures'}}" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" th:value="${searchQuery}" class="form-control" placeholder="Rechercher par client ou référence...">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select name="statut" class="form-select">
+                    <option value="">Tous les statuts</option>
+                    <option th:each="st : ${statutsDisponibles}" 
+                            th:value="${st.name()}" 
+                            th:text="${st.libelle}"
+                            th:selected="${statutFiltre != null and statutFiltre.name() == st.name()}">
+                    </option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-secondary flex-grow-1">Filtrer</button>
+                <a th:href="@{${currentType.name() == 'DEVIS' ? '/devis' : '/factures'}}" class="btn btn-outline-secondary" title="Réinitialiser">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tableau de Documents -->
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Référence</th>
+                        <th>Nom du Client</th>
+                        <th>Date</th>
+                        <th>Échéance</th>
+                        <th class="text-end">Montant Total</th>
+                        <th class="text-center">Statut</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${#lists.isEmpty(documents)}">
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="bi bi-folder2-open fs-1 d-block mb-2 text-secondary"></i>
+                            Aucun document trouvé.
+                        </td>
+                    </tr>
+                    <tr th:each="doc : ${documents}">
+                        <td>
+                            <a th:href="@{/documents/details/{id}(id=${doc.id})}" class="fw-bold text-decoration-none" th:text="${doc.reference}">DEV-001</a>
+                        </td>
+                        <td>
+                            <div class="fw-semibold" th:text="${doc.nomClient}">Nom Client</div>
+                            <small class="text-muted" th:if="${doc.emailClient}" th:text="${doc.emailClient}">client@email.com</small>
+                        </td>
+                        <td th:text="${#temporals.format(doc.date, 'dd/MM/yyyy')}">01/01/2026</td>
+                        <td class="text-muted small" th:text="${doc.dateEcheance != null ? #temporals.format(doc.dateEcheance, 'dd/MM/yyyy') : '-'}">-</td>
+                        <td class="text-end fw-bold fs-6" th:text="${#numbers.formatDecimal(doc.montantTotal, 1, 'WHITESPACE', 2, 'POINT')} + ' €'">0.00 €</td>
+                        <td class="text-center">
+                            <span class="badge" th:classappend="${doc.statut.badgeClass}" th:text="${doc.statut.libelle}">Statut</span>
+                        </td>
+                        <td class="text-end">
+                            <div class="dropdown d-inline-block">
+                                <button class="btn btn-sm btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    Actions
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                    <li>
+                                        <a class="dropdown-item" th:href="@{/documents/details/{id}(id=${doc.id})}">
+                                            <i class="bi bi-eye text-primary me-2"></i> Consulter
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" th:href="@{/documents/modifier/{id}(id=${doc.id})}">
+                                            <i class="bi bi-pencil text-secondary me-2"></i> Modifier
+                                        </a>
+                                    </li>
+                                    <!-- Convertir devis en facture -->
+                                    <li th:if="${doc.isDevis()}">
+                                        <form th:action="@{/documents/{id}/convertir(id=${doc.id})}" method="post" class="d-inline">
+                                            <button type="submit" class="dropdown-item" onclick="return confirm('Confirmer la conversion de ce devis en facture ?')">
+                                                <i class="bi bi-arrow-repeat text-success me-2"></i> Convertir en Facture
+                                            </button>
+                                        </form>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form th:action="@{/documents/supprimer/{id}(id=${doc.id})}" method="post" class="d-inline">
+                                            <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce document ?')">
+                                                <i class="bi bi-trash me-2"></i> Supprimer
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+
+</body>
+</html>

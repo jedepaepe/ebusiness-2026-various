@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: head(${document.type.libelle + ' ' + document.reference})}"></head>
+<body>
+
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<main class="container my-4">
+    <!-- Messages Flash -->
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show no-print" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <span th:text="${successMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Barre d'actions supérieure (masquée à l'impression) -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4 no-print">
+        <a th:href="@{${document.isDevis() ? '/devis' : '/factures'}}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Retour à la liste
+        </a>
+        <div class="d-flex flex-wrap gap-2">
+            <!-- Bouton Impression -->
+            <button onclick="window.print()" class="btn btn-outline-dark">
+                <i class="bi bi-printer me-1"></i> Imprimer / PDF
+            </button>
+            
+            <!-- Convertir en facture si c'est un devis -->
+            <form th:if="${document.isDevis()}" th:action="@{/documents/{id}/convertir(id=${document.id})}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-success" onclick="return confirm('Convertir ce devis en facture client ?')">
+                    <i class="bi bi-arrow-repeat me-1"></i> Convertir en Facture
+                </button>
+            </form>
+
+            <!-- Modifier -->
+            <a th:href="@{/documents/modifier/{id}(id=${document.id})}" class="btn btn-primary">
+                <i class="bi bi-pencil me-1"></i> Modifier
+            </a>
+
+            <!-- Supprimer -->
+            <form th:action="@{/documents/supprimer/{id}(id=${document.id})}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Confirmer la suppression ?')">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Facture / Devis Modèle Imprimable -->
+    <div class="invoice-box">
+        <!-- En-tête du document -->
+        <div class="row align-items-start mb-5 pb-4 border-bottom">
+            <div class="col-sm-7">
+                <h2 class="fw-bold text-dark mb-1">
+                    <span th:text="${document.type.libelle}">DEVIS</span>
+                </h2>
+                <div class="fs-5 text-muted mb-2">Réf : <span class="fw-semibold text-dark" th:text="${document.reference}">DEV-2026-001</span></div>
+                <span class="badge fs-6" th:classappend="${document.statut.badgeClass}" th:text="${document.statut.libelle}">Statut</span>
+            </div>
+            <div class="col-sm-5 text-sm-end mt-3 mt-sm-0">
+                <h4 class="fw-bold text-primary mb-1">Devis & Factures SARL</h4>
+                <div class="text-muted small">
+                    <div>10 Rue des Développeurs</div>
+                    <div>75008 Paris, France</div>
+                    <div>contact@entreprise.com</div>
+                    <div>SIRET : 123 456 789 00012</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations Client & Dates -->
+        <div class="row mb-5">
+            <div class="col-sm-6 mb-4 mb-sm-0">
+                <div class="p-3 rounded bg-light border">
+                    <span class="text-uppercase small fw-bold text-muted d-block mb-2">Destinataire (Client)</span>
+                    <h5 class="fw-bold mb-1" th:text="${document.nomClient}">Nom du Client</h5>
+                    <div class="text-muted small" th:if="${document.adresseClient}">
+                        <i class="bi bi-geo-alt me-1"></i><span th:text="${document.adresseClient}">Adresse</span>
+                    </div>
+                    <div class="text-muted small" th:if="${document.emailClient}">
+                        <i class="bi bi-envelope me-1"></i><span th:text="${document.emailClient}">email@client.com</span>
+                    </div>
+                    <div class="text-muted small" th:if="${document.telephoneClient}">
+                        <i class="bi bi-telephone me-1"></i><span th:text="${document.telephoneClient}">01 23 45 67 89</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="p-3 rounded bg-light border">
+                    <span class="text-uppercase small fw-bold text-muted d-block mb-2">Détails temporels</span>
+                    <div class="d-flex justify-content-between py-1 border-bottom">
+                        <span class="text-muted">Date d'émission :</span>
+                        <strong th:text="${#temporals.format(document.date, 'dd MMMM yyyy')}">21 Novembre 2026</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-1 border-bottom" th:if="${document.dateEcheance}">
+                        <span class="text-muted" th:text="${document.isDevis() ? 'Validité jusqu\'au :' : 'Échéance de paiement :'}">Échéance :</span>
+                        <strong th:text="${#temporals.format(document.dateEcheance, 'dd MMMM yyyy')}">21 Décembre 2026</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-1">
+                        <span class="text-muted">Base de données :</span>
+                        <span class="badge bg-secondary">SQLite locale</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Description des prestations -->
+        <div class="mb-5">
+            <h6 class="text-uppercase small fw-bold text-muted mb-3">Détail des prestations et services</h6>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Description</th>
+                            <th class="text-end" style="width: 200px;">Total (€ HT)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div class="fw-semibold" th:text="${document.description != null && !document.description.isEmpty() ? document.description : 'Prestations conformes au bon de commande'}">
+                                    Description des prestations
+                                </div>
+                            </td>
+                            <td class="text-end fw-bold fs-6" th:text="${#numbers.formatDecimal(document.montantTotal, 1, 'WHITESPACE', 2, 'POINT')} + ' €'">
+                                0.00 €
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Récapitulatif Total -->
+        <div class="row justify-content-end mb-5">
+            <div class="col-sm-6 col-md-5">
+                <div class="border rounded p-3 bg-light">
+                    <div class="d-flex justify-content-between py-1 border-bottom">
+                        <span class="text-muted">Sous-total :</span>
+                        <span th:text="${#numbers.formatDecimal(document.montantTotal, 1, 'WHITESPACE', 2, 'POINT')} + ' €'">0.00 €</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-1 border-bottom">
+                        <span class="text-muted">TVA (0% / Régime franchise) :</span>
+                        <span>0.00 €</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 fs-5 fw-bold text-primary">
+                        <span>Montant Total :</span>
+                        <span th:text="${#numbers.formatDecimal(document.montantTotal, 1, 'WHITESPACE', 2, 'POINT')} + ' €'">0.00 €</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conditions et mentions légales -->
+        <div class="border-top pt-4 text-muted small">
+            <div class="row">
+                <div class="col-md-8">
+                    <strong>Conditions de règlement :</strong> Paiement à réception par virement bancaire.
+                    <br>En cas de retard de paiement, une indemnité forfaitaire de 40 € pour frais de recouvrement sera due.
+                </div>
+                <div class="col-md-4 text-md-end mt-2 mt-md-0">
+                    <em>Document généré via Spring Boot & SQLite</em>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+
+</body>
+</html>
